@@ -19,43 +19,63 @@ async function startServer() {
       return res.status(400).send('URL query parameter is required');
     }
 
+    const normalizedBase = targetUrl.includes('?') ? targetUrl.split('?')[0] : targetUrl;
+
     try {
       const response = await axios.get(targetUrl, {
         headers: {
           'User-Agent': userAgent,
           'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-          'Accept-Language': 'en-US,en;q=0.9',
+          'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+          'Referer': normalizedBase, // Crucial for captchas
         },
         responseType: 'text',
-        timeout: 10000,
+        timeout: 15000,
       });
 
       let html = response.data;
       
-      // Ensure targetUrl ends with a slash if it's just a domain for proper base tag behavior
-      const normalizedBase = targetUrl.includes('?') ? targetUrl.split('?')[0] : targetUrl;
       const baseTag = `<base href="${normalizedBase}">`;
       
-      // Inject base tag and mobile viewport if missing
+      // Inject script to mask iframe environment
+      const antiFrameBuster = `
+        <script>
+          (function() {
+            try {
+              // Try to trick scripts that check for window.top
+              Object.defineProperty(window, 'top', { get: function() { return window.self; } });
+              Object.defineProperty(window, 'parent', { get: function() { return window.self; } });
+              
+              // Prevent common frame-busting redirects
+              window.onbeforeunload = function() { return null; };
+              
+              // Fix for some mobile event issues in iframes
+              document.addEventListener('touchstart', function() {}, {passive: true});
+            } catch (e) {}
+          })();
+        </script>
+      `;
+
       const mobileViewport = '<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">';
       
       if (html.includes('<head>')) {
-        html = html.replace('<head>', `<head>${baseTag}${mobileViewport}`);
+        html = html.replace('<head>', `<head>${baseTag}${antiFrameBuster}${mobileViewport}`);
       } else {
-        html = `<html><head>${baseTag}${mobileViewport}</head><body>${html}</body></html>`;
+        html = `<html><head>${baseTag}${antiFrameBuster}${mobileViewport}</head><body>${html}</body></html>`;
       }
 
-      // Aggressively remove frame-blocking scripts and meta tags
+      // Aggressively remove security headers in meta tags
       html = html.replace(/<meta http-equiv="Content-Security-Policy".*?>/gi, '');
       html = html.replace(/<meta http-equiv="X-Frame-Options".*?>/gi, '');
-      html = html.replace(/if\s*\(window\.top\s*!==\s*window\.self\).*?{.*?}/g, ''); 
-      html = html.replace(/if\s*\(top\s*!==\s*self\).*?{.*?}/g, '');
-      html = html.replace(/window\.top\s*=\s*window\.self/g, '');
-      html = html.replace(/parent\.location\s*=\s*self\.location/g, '');
+      
+      // Remove scripts that try to break out of frames
+      html = html.replace(/if\s*\(top\s*!==\s*self\)/gi, 'if(false)');
+      html = html.replace(/if\s*\(window\.top\s*!==\s*window\.self\)/gi, 'if(false)');
 
       res.setHeader('Content-Type', 'text/html');
       res.setHeader('X-Frame-Options', 'ALLOWALL');
       res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Content-Security-Policy', "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; script-src * 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src * 'unsafe-inline'; img-src * data: blob: 'unsafe-inline'; frame-src * data: blob:; style-src * 'unsafe-inline';");
       res.send(html);
     } catch (error: any) {
       console.error('Proxy error:', error.message);

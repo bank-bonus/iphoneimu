@@ -37,14 +37,19 @@ export default function App() {
   const [scale, setScale] = useState(0.8);
   const [isLoading, setIsLoading] = useState(false);
   const [useProxy, setUseProxy] = useState(true);
+  const [isDesktop, setIsDesktop] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const currentDevice = DEVICES[device];
 
   const getEffectiveUrl = () => {
     if (!url) return '';
+    const ua = isDesktop 
+      ? 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36'
+      : 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1';
+    
     if (useProxy) {
-      return `/api/proxy?url=${encodeURIComponent(url)}&ua=${encodeURIComponent('Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1')}`;
+      return `/api/proxy?url=${encodeURIComponent(url)}&ua=${encodeURIComponent(ua)}`;
     }
     return url;
   };
@@ -215,8 +220,27 @@ export default function App() {
                   )} />
                 </button>
               </div>
+
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Monitor className="w-4 h-4 text-purple-400" />
+                  <span className="text-xs font-bold uppercase tracking-wider">Desktop UA</span>
+                </div>
+                <button
+                  onClick={() => setIsDesktop(!isDesktop)}
+                  className={cn(
+                    "w-10 h-5 rounded-full transition-colors relative",
+                    isDesktop ? "bg-purple-600" : "bg-neutral-800"
+                  )}
+                >
+                  <div className={cn(
+                    "absolute top-1 w-3 h-3 bg-white rounded-full transition-transform",
+                    isDesktop ? "left-6" : "left-1"
+                  )} />
+                </button>
+              </div>
               <p className="text-[11px] text-white/50 leading-relaxed">
-                Safe Mode (Proxy) bypasses restrictions like X-Frame-Options, allowing you to view sites like Google or YouTube.
+                Desktop UA forces the site to think you are on a computer. This can help bypass some mobile-only captchas.
               </p>
             </div>
 
@@ -273,7 +297,7 @@ export default function App() {
               >
                 <AnimatePresence mode="wait">
                   <motion.iframe
-                    key={url + orientation + useProxy}
+                    key={url + orientation + useProxy + isDesktop}
                     ref={iframeRef}
                     src={getEffectiveUrl()}
                     className="w-full h-full border-none bg-white font-sans"
@@ -282,7 +306,6 @@ export default function App() {
                     exit={{ opacity: 0 }}
                     onLoad={() => setIsLoading(false)}
                     allow="accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; vr; xr-spatial-tracking"
-                    sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
                   />
                 </AnimatePresence>
 
