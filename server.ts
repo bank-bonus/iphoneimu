@@ -48,11 +48,14 @@ async function startServer() {
       // Aggressively remove frame-blocking scripts and meta tags
       html = html.replace(/<meta http-equiv="Content-Security-Policy".*?>/gi, '');
       html = html.replace(/<meta http-equiv="X-Frame-Options".*?>/gi, '');
-      html = html.replace(/if\s*\(window\.top\s*!==\s*window\.self\).*?{.*?}/g, 'if(false){}'); // Break some common frame-busters
-      html = html.replace(/if\s*\(top\s*!==\s*self\).*?{.*?}/g, 'if(false){}');
+      html = html.replace(/if\s*\(window\.top\s*!==\s*window\.self\).*?{.*?}/g, ''); 
+      html = html.replace(/if\s*\(top\s*!==\s*self\).*?{.*?}/g, '');
+      html = html.replace(/window\.top\s*=\s*window\.self/g, '');
+      html = html.replace(/parent\.location\s*=\s*self\.location/g, '');
 
       res.setHeader('Content-Type', 'text/html');
       res.setHeader('X-Frame-Options', 'ALLOWALL');
+      res.setHeader('Access-Control-Allow-Origin', '*');
       res.send(html);
     } catch (error: any) {
       console.error('Proxy error:', error.message);

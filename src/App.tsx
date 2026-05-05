@@ -276,11 +276,13 @@ export default function App() {
                     key={url + orientation + useProxy}
                     ref={iframeRef}
                     src={getEffectiveUrl()}
-                    className="w-full h-full border-none bg-white"
+                    className="w-full h-full border-none bg-white font-sans"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     onLoad={() => setIsLoading(false)}
+                    allow="accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; vr; xr-spatial-tracking"
+                    sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts"
                   />
                 </AnimatePresence>
 
