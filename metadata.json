@@ -1,0 +1,6 @@
+{
+  "name": "IPhone Emulator Web App",
+  "description": "A web-based iPhone simulator for testing websites and games. Enter a URL to see how it looks and behaves in a mobile frame.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
